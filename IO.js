@@ -1,162 +1,88 @@
-import axios from "axios";
 import React, { useEffect, useRef, useState } from "react";
-import { withRouter } from "react-router-dom";
-import ImageBoard from "./ImageBoard";
+import "./CardList.css";
 
-import "./ImageBoard.css";
-import useMediaQuery from "@mui/material/useMediaQuery";
-import { CircularProgress } from "@mui/material";
+function CardList() {
+  const [Data, setData] = useState([
+    { name: "기린", id: 0 },
+    { name: "강아지", id: 1 },
+    { name: "토끼", id: 2 },
+    { name: "호랑이", id: 3 },
+    { name: "사자", id: 4 },
+  ]);
 
-function ImageBoardCmpList() {
-  let number = 1;
-  const target = useRef(null);
   const viewport = useRef(null);
+  const target = useRef(null);
 
-  const [DataList, setDataList] = useState([]);
-  const mediaQuery = useMediaQuery("(min-width:641px)");
-
-  const [DataLess, setDataLess] = useState(null);
-
-  useEffect(() => {
-    let CleanUpBoolean = true;
-    axios.get("/api/boards/imageBoardListCmp").then((response) => {
-      const value = [];
-
-      // eslint-disable-next-line array-callback-return
-      response.data.map((list) => {
-        axios
-          .get("/api/boards/recommandLength/" + list._id)
-          .then((response) => {
-            console.log(response.data);
-            list.recommand = response.data[0]?.recommand;
-          });
-        value.push(list);
-      });
-      if (CleanUpBoolean) {
-        setDataList(value);
-      }
-    });
-
-    return () => {
-      CleanUpBoolean = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    let io;
-    if (target.current) {
-      console.log("intersection observe");
-      const options = {
-        root: viewport.current,
-        threshold: 0,
-      };
-
-      const handleintersection = (entries, observer) => {
-        console.log(entries);
-        entries.forEach((entry) => {
-          if (!entry.isIntersecting) {
-            return;
-          }
-          loadItems();
-
-          observer.unobserve(entry.target);
-          if (!DataLess) {
-            setTimeout(() => {
-              ++number;
-              if (target.current) observer.observe(target.current);
-            }, 1000);
-          }
-        });
-      };
-
-      io = new IntersectionObserver(handleintersection, options);
-
-      if (target.current) {
-        io.observe(target.current);
-      }
-    }
-
-    return () => {
-      io && io.disconnect();
-      setDataList(null);
-    };
-  }, [target, viewport]);
-
-  
   const loadItems = () => {
+    setData((prevState) => {
+      const animals = [
+        { name: "고양이" },
+        { name: "코끼리" },
+        { name: "원숭이" },
+        { name: "고라니" },
+        { name: "기린" },
+        { name: "표범" },
+      ];
 
-    axios.get("/api/boards/imageBoardListCmp/" + number).then((response) => {
-      if (response.data.length === 0) {
-        setDataLess(true);
-        return console.log("last data");
-      }
-
-      // eslint-disable-next-line array-callback-return
-      response.data.map((list) => {
-        axios
-          .get("/api/boards/recommandLength/" + list._id)
-          .then((response) => {
-            console.log(response.data);
-            async function push() {
-              list.recommand = response.data[0]?.recommand;
-            }
-            push().then(() => {
-              // value.push(list);
-              setDataList((prevState) => {
-                return [...prevState, list];
-              });
-            });
-          });
+      const id = prevState[prevState.length - 1].id;
+      const animalId = animals.map((animal, index) => {
+        return { ...animal, id: id + index + 1 };
       });
+
+      return [...prevState, ...animalId];
     });
   };
 
+  useEffect(() => {
+    const options = {
+      root: viewport.current,
+      threshold: 0,
+    };
+
+    const handleintersection = (entries, observer) => {
+      console.log(entries);
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) {
+          return;
+        }
+
+        loadItems();
+
+        observer.unobserve(entry.target);
+        observer.observe(target.current);
+      });
+    };
+
+    const io = new IntersectionObserver(handleintersection, options);
+
+    if (target.current) {
+      io.observe(target.current);
+    }
+
+    //clean up
+    return () => io && io.disconnent();
+  }, [viewport, target]);
+
   return (
-    <div
-      className="CmpList"
-      style={{ paddingTop: "64px", height: "100%" }}
-      ref={viewport}
-    >
-      <div
-        className="viewport"
-        style={{ width: "100%", height: "90vh", overflow: "auto" }}
-      >
-        {DataList &&
-          DataList.map((item, index) => {
-            // let lastEl = index === DataList.length - 1
-            return (
-              <div
-                key={index}
-                className={mediaQuery ? `cmpBox` : `cmpBoxSmall`}
-                // ref={lastEl ? target : null}
-              >
-                <div className={mediaQuery ? `card` : null}>
-                  <ImageBoard paramKey={item._id} contentPosition={false} />
-                </div>
-              </div>
-            );
-          })}
-        {DataList ? (
-          <div
-            style={{ width: "100%", height: "300px", position: "relative" }}
-            ref={target}
-          >
-            {DataLess ? null : (
-              <CircularProgress
-                sx={{
-                  position: "absolute",
-                  top: "calc(50% - 20px)",
-                  left: "calc(50% - 20px)",
-                }}
-              />
-            )}
-          </div>
-        ) : (
-          <div ref={DataList ? target : null} />
-        )}
-      </div>
+    <div className="wrapper">
+      <section className="card-grid" id="target-root" ref={viewport}>
+        {Data.map((animal, index) => {
+          return (
+            <div key={index} className="card">
+              <p>아이디:{animal.id}</p>
+              <p>이름:{animal.name}</p>
+            </div>
+          );
+        })}
+        <div 
+            style={{ width: "100%", height: "500px", textAlign: "center" }}
+            ref={target}    
+        >
+          로딩중 ..
+        </div>
+      </section>
     </div>
   );
 }
 
-export default withRouter(ImageBoardCmpList);
+export default CardList;
